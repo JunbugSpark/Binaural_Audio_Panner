@@ -9,9 +9,9 @@ import sounddevice as sd            ##Crucial for real time audio
 from scipy.io import wavfile        ##For reading .wav files
 from scipy.signal import resample_poly  ##For changing HRTF sample rate to 48kHz
 
-import zipfile                      ##For unzipping HRTF dataset
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
-fs, xsig = wavfile.read('audio/Sample Song.wav')
+fs, xsig = wavfile.read(os.path.join(script_dir, 'audio', 'Sample Song.wav'))
 x = np.array(xsig)
 
 elevation = 80
@@ -20,7 +20,7 @@ azimuth = 60
 
 filename = f"elev{elevation}/{pinna}{elevation}e0{azimuth}a.wav"
 
-hfs, hsig = wavfile.read('/Users/junbug/Documents/VS Code/Python/' + filename)
+hfs, hsig = wavfile.read(os.path.join(script_dir, 'hrtf', filename))
 
 h_sig = resample_poly(hsig, fs, hfs)
 
