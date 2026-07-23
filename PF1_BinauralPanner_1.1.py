@@ -11,9 +11,7 @@ from scipy.signal import resample_poly  ##For changing HRTF sample rate to 48kHz
 
 import zipfile                      ##For unzipping HRTF dataset
 
-zipfile.ZipFile('/Users/junbug/Documents/VS Code/Python/HRTF.zip').extractall('/Users/junbug/Documents/VS Code/Python')
-
-fs, xsig = wavfile.read('/Users/junbug/Documents/VS Code/Python/XO Tour Llif3.wav')
+fs, xsig = wavfile.read('audio/Sample Song.wav')
 x = np.array(xsig)
 
 elevation = 80
