@@ -13,23 +13,22 @@ import math                         ##For rounding up during the for loop
 
 import zipfile                      ##For unzipping HRTF dataset
 
-##Extract HRTF dataset
-zipfile.ZipFile('/Users/junbug/Documents/VS Code/Python/HRTF.zip').extractall('/Users/junbug/Documents/VS Code/Python')
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
-##Read sample audio file - Lil Uzi Vert
-fs, xsig = wavfile.read('/Users/junbug/Documents/VS Code/Python/XO Tour Llif3.wav')
+##Read sample audio file
+fs, xsig = wavfile.read(os.path.join(script_dir,'Sample Song.wav'))
 x = np.array(xsig)
 
 ##Assign HRTF parameters
-elevation = 20
+elevation = 80
 pinna = "H"
-azimuth = 180
+azimuth = 60
 
 ##Assign HRTF filename based on parameters
-filename = f"elev{elevation}/{pinna}{elevation}e{azimuth:03d}a.wav"
+filename = f"elev{elevation}/{pinna}{elevation}e0{azimuth}a.wav"
 
 ##Read the HRTF file
-hfs, hsig = wavfile.read('/Users/junbug/Documents/VS Code/Python/' + filename)
+hfs, hsig = wavfile.read(os.path.join(script_dir, filename))
 
 ##Resample the HRTF to match audio file sample rate
 h_sig = resample_poly(hsig, fs, hfs)
@@ -98,6 +97,8 @@ output[:, 0] = y_left
 output[:, 1] = y_right
 
 output = output / np.max(np.abs(output))
+
+print("Shape:", output.shape, "Dtype:", output.dtype)
 
 sd.play(output, fs)
 sd.wait()
