@@ -15,25 +15,34 @@ import zipfile
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
+##Locates the song and makes it an audio file (xsig)
 fs, xsig = wavfile.read(os.path.join(script_dir,'Stereo Song 2.wav'))
+##Turns signal into an array
 x = np.array(xsig)
 
+##Normalize
 x = x.astype(np.float32)
 x = x / np.max(np.abs(x))
 
+##Stereo rray split into left and right channels
 x_left = x[:, 0]
 x_right = x[:, 1]
 
+##Elevation and Azimuth input
 elevation = 0
 pinna = "H"
-azimuth = -150
+azimuth = 45
+spread = 30
 
-azimuthL = azimuth - 15
-azimuthR = azimuth + 15
+##Azimuth including stereo spread
+azimuthL = azimuth - spread;
+azimuthR = azimuth + spread;
 
+##Temporary azimuth assignments which will be needed later in convolution
 tempAzimuthL = azimuthL
 tempAzimuthR = azimuthR
 
+##Swaps the Azimuth so that it encapsulates all 360 degrees
 if (azimuthL < 0):
   azimuthL = np.abs(azimuthL)
 if (azimuthR < 0):
@@ -42,37 +51,45 @@ if (azimuthR < 0):
 filenameL = f"elev{elevation}/{pinna}{elevation}e{azimuthL:03d}a.wav"
 filenameR = f"elev{elevation}/{pinna}{elevation}e{azimuthR:03d}a.wav"
 
-hfs, hsig_left = wavfile.read(os.path.join(script_dir, filenameL))
-hfs, hsig_right = wavfile.read(os.path.join(script_dir, filenameR))
+hfs, hsig_L = wavfile.read(os.path.join(script_dir, filenameL))
+hfs, hsig_R = wavfile.read(os.path.join(script_dir, filenameR))
 
-h_sig_left = resample_poly(hsig_left, fs, hfs)
-h_sig_right = resample_poly(hsig_right, fs, hfs)
 
-h_left = np.array(h_sig_left)
-h_right = np.array(h_sig_right)
+h_sig_L = resample_poly(hsig_L, fs, hfs)
+h_sig_R = resample_poly(hsig_R, fs, hfs)
 
-h_left = h_left.astype(np.float32)
-h_left = h_left / np.max(np.abs(h_left))
 
-h_right = h_right.astype(np.float32)
-h_right = h_right / np.max(np.abs(h_right))
+hL = np.array(h_sig_L)
+hR = np.array(h_sig_L)
 
-h_left_L = h_left[:, 0]
-h_left_R = h_left[:, 1]
-h_right_L = h_right[:, 0]
-h_right_R = h_right[:, 1]
+
+hL = hL.astype(np.float32)
+hL = hL / np.max(np.abs(hL))
+hR = hR.astype(np.float32)
+hR = hR / np.max(np.abs(hR))
+
+
+hL_left = hL[:, 0]
+hL_right = hL[:, 1]
+hR_left = hR[:, 0]
+hR_right = hR[:, 1]
+
 
 if (tempAzimuthL < 0):
-  h_left_L = h_left[:, 1]
-  h_left_R = h_left[:, 0]
+  hL_left = hL[:, 1]
+  hL_right = hL[:, 0]
 if (tempAzimuthR < 0):
-  h_right_L = h_right[:, 1]
-  h_right_R = h_right[:, 0]
+  hR_left = hR[:, 1]
+  hR_right = hR[:, 0]
 
-def left_convolve(chunk, h_left):
+## At this point:
+##  Input signal L is x_left, R is x_right. System signal L is h_left and R is h_right
 
-  x_length = len(chunk)
-  h_length = len(h_left)
+##    Convolves input signal L against H left and H right
+def left_convolve(chunkleft, chunkright, hL_left, hR_left):
+
+  x_length = len(chunkleft)
+  h_length = len(hL_left)
   y_length = x_length + h_length - 1
 
   y = np.zeros(y_length)
@@ -82,8 +99,8 @@ def left_convolve(chunk, h_left):
   
   for n in range(math.ceil(x_length / chunkSize)):
 
-    leftOne = signal.fftconvolve(chunk, h_left_L, mode='full')
-    leftTwo = signal.fftconvolve(chunk, h_right_L, mode='full')
+    leftOne = signal.fftconvolve(chunkleft, hL_left, mode='full')
+    leftTwo = signal.fftconvolve(chunkright, hR_left, mode='full')
     leftProduct = leftOne + leftTwo
 
     y[index : index + len(leftProduct)] += leftProduct
@@ -92,9 +109,11 @@ def left_convolve(chunk, h_left):
 
   return y
 
-def right_convolve(chunk, h_right):
-  x_length = len(chunk)
-  h_length = len(h_right)
+
+##    Convolves input signal R against H left and H right
+def right_convolve(chunkleft, chunkright, hL_right, hR_right):
+  x_length = len(chunkright)
+  h_length = len(hR_right)
   y_length = x_length + h_length - 1
 
   y = np.zeros(y_length)
@@ -104,8 +123,8 @@ def right_convolve(chunk, h_right):
   
   for n in range(math.ceil(x_length / chunkSize)):
 
-    rightOne = signal.fftconvolve(chunk, h_right_R, mode='full')
-    rightTwo = signal.fftconvolve(chunk, h_left_R, mode='full')
+    rightOne = signal.fftconvolve(chunkleft, hL_right, mode='full')
+    rightTwo = signal.fftconvolve(chunkright, hR_right, mode='full')
     rightProduct = rightOne + rightTwo
 
     y[index : index + len(rightProduct)] += rightProduct
@@ -118,8 +137,8 @@ def right_convolve(chunk, h_right):
 
 
 
-tail_left = np.zeros(len(h_left) - 1)
-tail_right = np.zeros(len(h_right) - 1)
+tail_left = np.zeros(len(hL_left) - 1)
+tail_right = np.zeros(len(hR_right) - 1)
 
 position = 0
 
@@ -132,8 +151,8 @@ def callbackmachine(outdata, frames, time, status):
   chunkleft = x_left[position : position + frames]
   chunkright = x_right[position : position + frames]
 
-  left_out = left_convolve(chunkleft, h_left)
-  right_out = right_convolve(chunkright, h_right)
+  left_out = left_convolve(chunkleft, chunkright, hL_left, hR_left)
+  right_out = right_convolve(chunkleft, chunkright, hL_right, hR_right)
 
   outdata[:, 0] = left_out[: frames]
   outdata[: len(tail_left), 0] += tail_left
