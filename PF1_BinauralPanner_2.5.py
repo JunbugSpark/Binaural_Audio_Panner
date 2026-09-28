@@ -16,7 +16,7 @@ import zipfile
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 ##Locates the song and makes it an audio file (xsig)
-fs, xsig = wavfile.read(os.path.join(script_dir,'Stereo Song 2.wav'))
+fs, xsig = wavfile.read(os.path.join(script_dir,'Stereo Song.wav'))
 ##Turns signal into an array
 x = np.array(xsig)
 
