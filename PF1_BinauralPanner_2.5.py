@@ -1,5 +1,6 @@
 ##Code Clean-up 2
 ##Goal - Change input so that it takes stereo input.
+##DO NOT USE FILE - Currently has phase issues that needs fixing.
 
 import numpy as np          
 import scipy.signal as signal    
